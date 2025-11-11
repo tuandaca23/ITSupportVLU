@@ -1,0 +1,58 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.cache
+
+# Build Folders
+bin/
+obj/
+out/
+
+# Rider
+.idea/
+
+# Resharper
+_ReSharper*/
+*.DotSettings.user
+
+# NuGet
+*.nupkg
+# NuGet Packages folder
+packages/
+
+# ASP.NET / .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+*.dbmdl
+*.bak
+*.backup
+*.log
+
+# Entity Framework
+*.edmx
+*.sql
+*.sqlite
+
+# Node.js (if frontend exists in same repo)
+node_modules/
+
+# Others
+*.swp
+*.tmp
+*.cache
+*.DS_Store
+*.vsix
+*.pdb
+*.mdb
+
+# Ignore JetBrains Rider
+.idea/
+*.sln.iml
+
+# Ignore generated files from Visual Studio
+TestResults/
+*.vsix

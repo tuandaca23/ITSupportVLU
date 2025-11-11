@@ -1,0 +1,6 @@
+@ITSupportBE.Api_HostAddress = http://localhost:5204
+
+GET {{ITSupportBE.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
