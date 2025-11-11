@@ -1,8 +1,29 @@
 ﻿using ITSupportBE.Api.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+// === 1. ĐỊNH NGHĨA CHUỖI CORS ===
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+// === 2. THÊM SERVICES ===
+builder.Services.AddControllers()
+    // Cấu hình này để tránh lỗi "object cycle" khi JOIN (rất quan trọng)
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
 
+// Thêm CORS Service
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+                      policy =>
+                      {
+                          policy.WithOrigins("http://localhost:5173") // Cho phép Vue app
+                                .AllowAnyHeader()
+                                .AllowAnyMethod();
+                      });
+});
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
@@ -13,40 +34,25 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<ITSupportDbContext>(options =>
     options.UseSqlServer(connectionString));
 
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// === 3. CẤU HÌNH HTTP PIPELINE ===
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+// === 4. SỬ DỤNG CORS ===
+app.UseCors(MyAllowSpecificOrigins);
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+//app.UseAuthorization(); // (chưa dùng [Authorize] nên dòng này không cần)
 
-
+app.MapControllers();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

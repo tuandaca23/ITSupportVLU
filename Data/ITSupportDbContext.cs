@@ -12,7 +12,7 @@ namespace ITSupportBE.Api.Data
 
         // BẢNG CẤU HÌNH
         public DbSet<Role> Role { get; set; }
-        public DbSet<Category> Categorie { get; set; }
+        public DbSet<Category> Category { get; set; }
         public DbSet<TicketStatus> TicketStatus { get; set; }
 
         // BẢNG NGƯỜI DÙNG
@@ -20,7 +20,7 @@ namespace ITSupportBE.Api.Data
 
         // BẢNG NGHIỆP VỤ (CORE)
         public DbSet<Ticket> Ticket { get; set; }
-        public DbSet<TicketReply> TicketReplie { get; set; }
+        public DbSet<TicketReply> TicketReply { get; set; }
         public DbSet<InternalNote> InternalNote { get; set; } // Bảng mới
         public DbSet<TicketAttachment> TicketAttachment { get; set; }
 
@@ -129,7 +129,7 @@ namespace ITSupportBE.Api.Data
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<TicketAttachment>()
-                .HasOne(a => a.TicketReply)
+                .HasOne(a => a.Reply)
                 .WithMany()
                 .HasForeignKey(a => a.ReplyId);
         }
