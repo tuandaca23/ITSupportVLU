@@ -60,37 +60,59 @@
     </div>
 
     <!-- Modal Tạo Yêu cầu mới -->
-    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click="closeModal">
+    <div
+      v-if="showModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      @click="closeModal"
+    >
       <div class="w-full max-w-2xl bg-white p-8 rounded-lg shadow text-black" @click.stop>
         <h2 class="text-2xl font-bold mb-6 text-black">Tạo Yêu cầu mới</h2>
         <form @submit.prevent="submitRequest">
           <div class="mb-4 text-black">
             <label class="block text-sm font-medium mb-2 text-black">Tiêu đề</label>
-            <input type="text" v-model="form.title" class="w-full p-3 border rounded text-black placeholder-gray-500" placeholder="Nhập tiêu đề" required />
+            <input
+              type="text"
+              v-model="form.title"
+              class="w-full p-3 border rounded text-black placeholder-gray-500"
+              placeholder="Nhập tiêu đề"
+              required
+            />
           </div>
           <div class="mb-4 text-black">
             <label class="block text-sm font-medium mb-2 text-black">Phân loại</label>
             <select v-model="form.category" class="w-full p-3 border rounded text-black">
-              <option value="">Chọn phân loại vấn đề</option>
-              <option>Lỗi Mạng</option>
-              <option>Lỗi Phần mềm</option>
-              <option>Tài khoản</option>
-              <option>Yêu cầu khác</option>
+              <option value="0">Chọn phân loại vấn đề</option>
+              <option v-for="cat in categories" :key="cat.categoryId" :value="cat.categoryId">
+                {{ cat.categoryName }}
+              </option>
             </select>
           </div>
           <div class="mb-4 text-black">
             <label class="block text-sm font-medium mb-2 text-black">Mô tả</label>
-            <textarea v-model="form.description" rows="5" class="w-full p-3 border rounded text-black placeholder-gray-500" placeholder="Mô tả chi tiết vấn đề" required></textarea>
+            <textarea
+              v-model="form.description"
+              rows="5"
+              class="w-full p-3 border rounded text-black placeholder-gray-500"
+              placeholder="Mô tả chi tiết vấn đề"
+              required
+            ></textarea>
           </div>
           <div class="mb-4 text-black">
             <label class="block text-sm font-medium mb-2 text-black">Đính kèm tệp</label>
             <input type="file" multiple class="w-full text-black" />
           </div>
           <div class="flex space-x-4">
-            <button type="submit" class="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700">
+            <button
+              type="submit"
+              class="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700"
+            >
               Gửi Yêu cầu
             </button>
-            <button type="button" @click="closeModal" class="bg-red-600 text-white px-6 py-3 rounded hover:bg-red-700">
+            <button
+              type="button"
+              @click="closeModal"
+              class="bg-red-600 text-white px-6 py-3 rounded hover:bg-red-700"
+            >
               Đóng
             </button>
           </div>
@@ -101,26 +123,62 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { api } from '@/api/axios' // 1. Import helper API
 
 const showModal = ref(false)
 const form = ref({
   title: '',
-  category: '',
-  description: ''
+  category: 0,
+  description: '',
+})
+
+// Biến mới để lưu danh mục
+const categories = ref<any[]>([])
+
+// Hàm tải danh mục khi component được load
+onMounted(async () => {
+  try {
+    const response = await api.get('/categories') // Gọi API 1
+    categories.value = response.data
+  } catch (error) {
+    console.error('Không tải được danh mục:', error)
+  }
+  // TODO: Tải danh sách "Yêu cầu của tôi"
 })
 
 function closeModal() {
   showModal.value = false
   // Reset form if needed
-  form.value = { title: '', category: '', description: '' }
+  form.value = { title: '', category: 0, description: '' }
 }
 
-function submitRequest() {
-  // Mock: Handle form submission (e.g., send to API)
-  console.log('Submitted request:', form.value)
-  // Close modal after submission
-  closeModal()
+async function submitRequest() {
+  // Lấy UserId của sinh viên đã "đăng nhập"
+  const studentId = localStorage.getItem('currentUserId')
+  if (!studentId || form.value.category === 0) {
+    alert('Vui lòng chọn phân loại vấn đề.')
+    return
+  }
+
+  // 6. Chuẩn bị dữ liệu gửi đi (khớp với CreateTicketDto)
+  const payload = {
+    studentId: parseInt(studentId),
+    title: form.value.title,
+    description: form.value.description,
+    categoryId: form.value.category,
+  }
+
+  try {
+    // 7. Gọi API 2 (Tạo Ticket)
+    await api.post('/tickets', payload)
+    alert('Gửi yêu cầu thành công!')
+    closeModal()
+    // TODO: Tải lại danh sách "Yêu cầu của tôi"
+  } catch (error) {
+    console.error('Lỗi khi gửi ticket:', error)
+    alert('Gửi yêu cầu thất bại.')
+  }
 }
 </script>
 

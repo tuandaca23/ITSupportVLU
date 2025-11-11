@@ -110,8 +110,13 @@
 </template>
 
 <script setup lang="ts">
+// Giả lập đăng nhập và chọn vai trò
+// Trong thực tế, bạn sẽ tích hợp với hệ thống xác thực của trường
+
+import { useRouter } from 'vue-router'
 import { ref } from 'vue'
 
+const router = useRouter()
 const showModal = ref(false)
 
 function onLogin() {
@@ -120,14 +125,20 @@ function onLogin() {
 
 function selectRole(role: string) {
   if (role === 'sinhvien') {
-    // Thay đổi URL này thành dashboard thực tế cho sinh viên
-    window.location.href = '/dashboard-sinhvien'
+    // Giả lập: User này là "Sinh Viên An" (UserId = 1)
+    localStorage.setItem('currentUserId', '1');
+    localStorage.setItem('currentUserRole', 'Student');
+    router.push('/dashboard-sinhvien'); // Dùng router.push
   } else if (role === 'ktv') {
-    // Thay đổi URL này thành dashboard thực tế cho KTV
-    window.location.href = '/dashboard-ktv'
+    // Giả lập: User này là "KTV Bình" (UserId = 2)
+    localStorage.setItem('currentUserId', '2');
+    localStorage.setItem('currentUserRole', 'KTV');
+    router.push('/dashboard-ktv'); // Dùng router.push
   } else if (role === 'admin') {
-    // Thay đổi URL này thành dashboard thực tế cho Admin
-    window.location.href = '/dashboard-admin'
+    // Giả lập: User này là "Admin Cường" (UserId = 3)
+    localStorage.setItem('currentUserId', '3');
+    localStorage.setItem('currentUserRole', 'Admin');
+    router.push('/dashboard-admin'); // Dùng router.push
   }
   showModal.value = false
 }

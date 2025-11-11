@@ -17,17 +17,13 @@
         <div class="lg:col-span-2 bg-gray-50 p-4 rounded">
           <h2 class="text-xl font-semibold mb-4 text-black">Lịch sử Chat</h2>
           <div class="space-y-4 max-h-96 overflow-y-auto">
-            <!-- Mock messages -->
-            <div class="flex justify-start">
-              <div class="bg-blue-100 p-3 rounded-lg max-w-xs">
-                <p class="text-black">Admin: Kiểm tra giúp tình trạng máy trạm.</p>
-                <span class="text-xs text-gray-500">2023-10-01 09:45</span>
-              </div>
-            </div>
-            <div class="flex justify-end">
-              <div class="bg-green-100 p-3 rounded-lg max-w-xs">
-                <p class="text-black">KTV: Đang xử lý, sẽ phản hồi sớm.</p>
-                <span class="text-xs text-gray-500">2023-10-01 10:00</span>
+            <div v-for="(msg, index) in chatHistory" :key="index" 
+                 :class="msg.isKtvMessage ? 'flex justify-end' : 'flex justify-start'">
+              <div :class="msg.isKtvMessage ? 'bg-green-100' : 'bg-blue-100'" 
+                   class="p-3 rounded-lg max-w-xs">
+                <p class="text-sm font-semibold text-black">{{ msg.senderName }}</p>
+                <p class="text-black">{{ msg.message }}</p>
+                <span class="text-xs text-gray-500">{{ new Date(msg.timestamp).toLocaleString('vi-VN') }}</span>
               </div>
             </div>
           </div>
@@ -63,9 +59,7 @@
             <option>Câu 2: Vui lòng cung cấp thêm thông tin.</option>
             <option>Câu 3: Sự cố đã được khắc phục.</option>
           </select>
-          <button
-            class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
-          >
+          <button class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
             Chèn Câu trả lời
           </button>
         </div>
@@ -87,23 +81,52 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { api } from '@/api/axios' // 1. Import helper API
 
 const route = useRoute()
 const ticketId = ref(route.params.id as string)
-const status = ref('New')
+const status = ref('In Progress') // Giả định
 const message = ref('')
+const chatHistory = ref<any[]>([]) // 2. Biến mới cho lịch sử chat
 
-function updateStatus() {
-  console.log(`Updated status for ticket ${ticketId.value} to ${status.value}`)
-  // TODO: gọi API update status
+// 3. Hàm tải lịch sử chat
+async function fetchChatHistory() {
+  try {
+    const response = await api.get(`/tickets/${ticketId.value}/replies`)
+    chatHistory.value = response.data
+  } catch (error) {
+    console.error('Lỗi tải lịch sử chat:', error)
+  }
 }
 
-function sendMessage() {
-  console.log(`Sent message: ${message.value} for ticket ${ticketId.value}`)
-  // TODO: gửi tin nhắn qua API
-  message.value = ''
+// 4. Tải lịch sử khi component được mounted
+onMounted(fetchChatHistory)
+
+async function sendMessage() {
+  const ktvId = localStorage.getItem('currentUserId')
+  if (!ktvId || message.value.trim() === '') return
+
+  const payload = {
+    userId: parseInt(ktvId),
+    message: message.value,
+  }
+
+  try {
+    // 5. Gọi API gửi tin nhắn
+    await api.post(`/tickets/${ticketId.value}/replies`, payload)
+    message.value = '' // Xóa tin nhắn đã gõ
+    await fetchChatHistory() // 6. Tải lại lịch sử chat (Cách đơn giản)
+    // (Sau này sẽ thay bằng SignalR để có real-time)
+  } catch (error) {
+    console.error('Lỗi gửi tin nhắn:', error)
+  }
+}
+
+function updateStatus() {
+  // TODO: Gọi API cập nhật trạng thái
+  console.log(`Updated status for ticket ${ticketId.value} to ${status.value}`)
 }
 </script>
 

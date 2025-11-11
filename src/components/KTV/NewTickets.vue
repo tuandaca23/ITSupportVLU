@@ -36,17 +36,43 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { api } from '@/api/axios' // 1. Import helper API
 
 const router = useRouter()
+const tickets = ref<any[]>([]) // 2. Bắt đầu với mảng rỗng
 
-const tickets = ref([
-  { id: 'T001', subject: 'Lỗi mạng', requester: 'Sinh viên A', category: 'Lỗi Mạng', status: 'New', updatedAt: '2023-10-01' },
-])
+// 3. Hàm tải ticket mới
+async function fetchNewTickets() {
+  try {
+    const response = await api.get('/tickets/queue/new') // Gọi API 3
+    tickets.value = response.data
+  } catch (error) {
+    console.error('Không tải được ticket mới:', error)
+  }
+}
 
-function claimTicket(id: string) {
-  // Cập nhật trạng thái (sau này sẽ gọi API thật)
-  router.push(`/ktv-request-detail/${id}`)
+// 4. Tải ticket khi component được mounted
+onMounted(fetchNewTickets)
+
+async function claimTicket(id: string) {
+  // 5. Lấy KtvId đã "đăng nhập"
+  const ktvId = localStorage.getItem('currentUserId')
+  if (!ktvId) {
+    alert('Lỗi: Không tìm thấy ID KTV. Vui lòng đăng nhập lại.')
+    return
+  }
+
+  try {
+    // 6. Gọi API 4 (Claim Ticket)
+    const payload = { ktvId: parseInt(ktvId) }
+    await api.post(`/tickets/${id}/claim`, payload)
+
+    // 7. Chuyển trang (nếu thành công)
+    router.push(`/ktv-request-detail/${id}`)
+  } catch (error) {
+    console.error('Lỗi khi nhận ticket:', error)
+  }
 }
 </script>
