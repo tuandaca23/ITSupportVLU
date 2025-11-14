@@ -14,7 +14,7 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     name: 'login',
     component: () => import('../views/LoginView.vue'),
-    meta: { title: 'Đăng nhập | IT Support Center' },
+    meta: { title: 'IT Support Center' },
   },
 
   // Routes cho Sinh viên
@@ -40,7 +40,20 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
-  scrollBehavior() {
+  // (GHI CHÚ: THAY ĐỔI) Nâng cấp hàm scrollBehavior
+  scrollBehavior(to, from, savedPosition) {
+    // 1. Nếu có vị trí đã lưu (bấm nút Back/Fwd của trình duyệt)
+    if (savedPosition) {
+      return savedPosition
+    }
+
+    // 2. (QUAN TRỌNG) Nếu chỉ thay đổi query (ví dụ: ?page=2)
+    //    thì KHÔNG làm gì cả (trả về false/undefined)
+    if (to.path === from.path && to.query !== from.query) {
+      return; // Giữ nguyên vị trí cuộn
+    }
+
+    // 3. Mặc định (chuyển trang mới), cuộn lên đầu
     return { top: 0 }
   },
 })

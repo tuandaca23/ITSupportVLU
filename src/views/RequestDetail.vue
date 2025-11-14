@@ -1,56 +1,281 @@
 <template>
   <main class="min-h-screen bg-slate-50 p-8 text-black">
-    <div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow text-black">
+    <div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow text-black" v-if="ticket">
       <h1 class="text-2xl font-bold mb-6 text-black">
-        Chi tiết Yêu cầu: [Placeholder] Tiêu đề
+        Chi tiết Yêu cầu: {{ ticket.title }}
       </h1>
+      <p class="text-black"><strong>Trạng thái:</strong> {{ ticket.statusName }}</p>
+      <p class="text-black"><strong>KTV phụ trách:</strong> {{ ticket.assigneeName }}</p>
+      <p class="text-black"><strong>Phân loại:</strong> {{ ticket.categoryName }}</p>
+      <p class="text-black mt-4"><strong>Mô tả ban đầu:</strong> {{ ticket.description }}</p>
 
-      <p class="text-black"><strong>Trạng thái:</strong> [Placeholder] Mới</p>
-      <p class="text-black"><strong>KTV phụ trách:</strong> [Placeholder] KTV001</p>
-
-      <!-- Lịch sử trao đổi -->
-      <div class="mb-6 text-black">
+      <div class="my-6 text-black">
         <h2 class="text-xl font-semibold mb-4 text-black">Lịch sử trao đổi</h2>
-        <div class="mb-4 p-4 bg-gray-100 rounded text-black">
-          <p><strong>[Placeholder] KTV001:</strong> [Placeholder] Tin nhắn</p>
-          <p class="text-sm text-gray-600">[Placeholder] 2023-10-02</p>
+        <div v-if="chatHistory.length === 0" class="text-gray-500">
+          Chưa có trao đổi nào.
         </div>
-        <!-- Có thể thêm các div lịch sử khác -->
+        <div v-else class="space-y-4 max-h-96 overflow-y-auto bg-gray-50 p-4 rounded-lg">
+          
+          <div v-for="(msg, index) in chatHistory" :key="index" 
+               :class="!msg.isKtvMessage ? 'flex justify-end' : 'flex justify-start'">
+            <div :class="!msg.isKtvMessage ? 'bg-blue-100' : 'bg-green-100'" 
+                 class="p-3 rounded-lg max-w-xs">
+              <p class="text-sm font-semibold text-black">{{ msg.senderName }}</p>
+              
+              <p class="text-black whitespace-pre-wrap break-all">
+                <template v-for="(part, i) in getMessageParts(msg.message)" :key="i">
+                  <a 
+                    v-if="part.type === 'url'" 
+                    :href="part.content" 
+                    target="_blank" 
+                    class="text-blue-600 underline hover:text-blue-800"
+                  >
+                    {{ part.content }}
+                  </a>
+                  <span v-else>
+                    {{ part.content }}
+                  </span>
+                </template>
+              </p>
+              
+              <span class="text-xs text-gray-500">{{ new Date(msg.timestamp).toLocaleString('vi-VN') }}</span>
+            </div>
+          </div>
+          </div>
       </div>
 
-      <!-- Khung phản hồi -->
-      <form>
+      <div v-if="showConnectButtons">
+        <p class="text-black font-semibold mb-3">
+          Bài viết tự động trên có giải quyết được vấn đề của bạn không?
+        </p>
+        <div class="flex flex-wrap gap-4 items-center">
+          <button
+            type="button"
+            @click="onMarkAsSolvedClicked"
+            class="bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700"
+          >
+            Đã giải quyết
+          </button>
+          <button
+            type="button"
+            @click="onRequestKtvClicked"
+            class="bg-red-600 text-white px-6 py-3 rounded hover:bg-red-700"
+          >
+            Tôi cần kết nối KTV
+          </button>
+          <button
+            type="button"
+            @click="goBack"
+            class="bg-gray-600 text-white px-6 py-3 rounded hover:bg-gray-700 ml-auto"
+          >
+            Quay lại Dashboard
+          </button>
+        </div>
+      </div>
+      <form @submit.prevent="sendReply" v-if="showChatBox">
         <textarea
-          placeholder="Gửi phản hồi..."
+          v-model="newMessage"
+          placeholder="Gửi phản hồi cho KTV..."
           rows="4"
           class="w-full p-3 border rounded mb-4 text-black placeholder-gray-500"
         ></textarea>
-        <button
-          type="submit"
-          class="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700 mr-4"
-        >
-          Gửi
-        </button>
-        <button
+        <div class="flex flex-wrap gap-4">
+          <button
+            type="submit"
+            class="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700"
+          >
+            Gửi
+          </button>
+          <button
+            type="button"
+            @click="onMarkAsSolvedClicked"
+            class="bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700"
+          >
+            Đã xong
+          </button>
+          <button
+            type="button"
+            @click="goBack"
+            class="bg-gray-600 text-white px-6 py-3 rounded hover:bg-gray-700 ml-auto"
+          >
+            Quay lại
+          </button>
+        </div>
+      </form>
+      <div v-if="showGoBackButtonOnly">
+         <button
           type="button"
           @click="goBack"
-          class="bg-red-600 text-white px-6 py-3 rounded hover:bg-red-700"
+          class="bg-gray-600 text-white px-6 py-3 rounded hover:bg-gray-700"
         >
-          Đóng yêu cầu
+          Quay lại
         </button>
-      </form>
+      </div>
+    </div>
+    
+    <div v-else class="text-center text-black">
+      Đang tải chi tiết ticket...
+    </div>
+
+    <div
+      v-if="showConfirmationModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      @click="closeConfirmationModal"
+    >
+      <div class="w-full max-w-lg bg-white p-8 rounded-lg shadow text-black" @click.stop>
+        <h2 class="text-2xl font-bold mb-4 text-black">{{ confirmationTitle }}</h2>
+        <p class="text-black mb-6 whitespace-pre-wrap">{{ confirmationMessage }}</p>
+        <div class="flex justify-end gap-4">
+          <button
+            type="button"
+            @click="handleCancel"
+            class="bg-gray-200 text-gray-800 px-6 py-3 rounded hover:bg-gray-300"
+          >
+            Hủy
+          </button>
+          <button
+            type="button"
+            @click="handleConfirm"
+            class="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700"
+          >
+            OK
+          </button>
+        </div>
+      </div>
     </div>
   </main>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { ref, onMounted, computed } from 'vue' 
+import { useRouter, useRoute } from 'vue-router'
+import { api } from '@/api/axios'
+
+// (GHI CHÚ: GIỮ NGUYÊN) Tất cả các biến ref và computed
 const router = useRouter()
+const route = useRoute()
+const ticketId = route.params.id as string;
+const ticket = ref<any>(null); 
+const chatHistory = ref<any[]>([]); 
+const newMessage = ref(''); 
+const hasRequestedKtv = ref(false);
+const showConfirmationModal = ref(false)
+const confirmationTitle = ref('')
+const confirmationMessage = ref('')
+const onConfirmAction = ref<(() => void) | null>(null) 
+const showConnectButtons = computed(() => {
+  return ticket.value && !ticket.value.isClosed && !ticket.value.isAssigned && !hasRequestedKtv.value;
+});
+const showChatBox = computed(() => {
+  return ticket.value && !ticket.value.isClosed && (ticket.value.isAssigned || hasRequestedKtv.value);
+});
+const showGoBackButtonOnly = computed(() => {
+  return ticket.value && ticket.value.isClosed;
+});
+
+// (GHI CHÚ: THÊM MỚI) Hàm "linkify" an toàn
+// Tách tin nhắn thành các phần text và URL
+function getMessageParts(message: string) {
+  if (!message) return [];
+  
+  // (GHI CHÚ:) Regex này tìm kiếm các URL (http, https)
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  
+  // Tách chuỗi tại vị trí URL
+  const parts = message.split(urlRegex);
+  
+  return parts.map(part => {
+    // Kiểm tra xem phần tử này có phải là URL không
+    if (part.match(urlRegex)) {
+      return { type: 'url', content: part };
+    }
+    return { type: 'text', content: part };
+  }).filter(part => part.content.length > 0); // Bỏ các chuỗi rỗng
+}
+
+// (GHI CHÚ: GIỮ NGUYÊN) Toàn bộ các hàm logic còn lại
+async function fetchData() {
+  try {
+    const ticketResponse = await api.get(`/tickets/${ticketId}`);
+    ticket.value = ticketResponse.data;
+    const chatResponse = await api.get(`/tickets/${ticketId}/replies`);
+    chatHistory.value = chatResponse.data;
+  } catch (error) {
+    console.error("Lỗi khi tải dữ liệu ticket:", error);
+  }
+}
+onMounted(fetchData);
+
+async function sendReply() {
+  const studentId = localStorage.getItem('currentUserId');
+  if (!studentId || newMessage.value.trim() === '') return;
+  const payload = { userId: parseInt(studentId), message: newMessage.value };
+  try {
+    await api.post(`/tickets/${ticketId}/replies`, payload);
+    newMessage.value = '';
+    await fetchData(); 
+  } catch (error) {
+    console.error('Lỗi gửi tin nhắn:', error);
+  }
+}
+
+function openConfirmation(title: string, message: string, onConfirm: () => void) {
+  confirmationTitle.value = title;
+  confirmationMessage.value = message;
+  onConfirmAction.value = onConfirm; 
+  showConfirmationModal.value = true;
+}
+function closeConfirmationModal() {
+  showConfirmationModal.value = false;
+  onConfirmAction.value = null; 
+}
+function handleCancel() {
+  closeConfirmationModal();
+}
+function handleConfirm() {
+  if (onConfirmAction.value) {
+    onConfirmAction.value(); 
+  }
+  closeConfirmationModal();
+}
+async function callApiMarkAsSolved() {
+  try {
+    await api.post(`/tickets/${ticketId}/mark-solved`);
+    router.push('/dashboard-sinhvien'); 
+  } catch (error) {
+    console.error("Lỗi khi đóng ticket:", error);
+    openConfirmation("Lỗi", "Không thể đóng ticket. Vui lòng thử lại.", () => {});
+  }
+}
+async function callApiRequestKtv() {
+  try {
+    await api.post(`/tickets/${ticketId}/request-ktv`);
+    hasRequestedKtv.value = true; 
+  } catch (error) {
+    console.error("Lỗi khi yêu cầu KTV:", error);
+    openConfirmation("Lỗi", "Không thể gửi yêu cầu KTV. Vui lòng thử lại.", () => {});
+  }
+}
+function onMarkAsSolvedClicked() {
+  openConfirmation(
+    "Xác nhận giải quyết", 
+    "Bạn đã chắc chắn vấn đề đã được giải quyết chứ?", 
+    callApiMarkAsSolved 
+  );
+}
+function onRequestKtvClicked() {
+  openConfirmation(
+    "Kết nối KTV",
+    "Bạn có muốn gửi yêu cầu kết nối KTV không?\nKTV sẽ hỗ trợ bạn qua khung chat này.",
+    callApiRequestKtv 
+  );
+}
 const goBack = () => {
-  router.back()
+  router.push('/dashboard-sinhvien');
 }
 </script>
 
 <style scoped>
-/* Tailwind xử lý phần giao diện; chỉ cần text-black cho toàn trang */
+/* (GHI CHÚ: GIỮ NGUYÊN) */
+/* Tailwind xử lý phần giao diện */
 </style>
