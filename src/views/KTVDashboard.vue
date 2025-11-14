@@ -6,7 +6,6 @@
     </header>
 
     <div class="bg-white p-6 rounded-lg shadow">
-      <!-- Tabs -->
       <div class="mb-6">
         <nav class="flex space-x-4">
           <button
@@ -21,7 +20,6 @@
         </nav>
       </div>
 
-      <!-- Component hiển thị theo tab -->
       <component :is="currentComponent" />
     </div>
   </main>
@@ -36,15 +34,16 @@ import MyAssignedTickets from '@/components/KTV/MyAssignedTickets.vue'
 import ResolvedTickets from '@/components/KTV/ResolvedTickets.vue'
 
 const tabs = [
-  { key: 'new', label: 'New Tickets Queue' },
-  { key: 'assigned', label: 'My Assigned Tickets' },
-  { key: 'resolved', label: 'Resolved Tickets' },
+  // (THAY ĐỔI) Đổi tên "New" thành "Chờ" (Wait)
+  { key: 'wait', label: 'Tickets đang chờ' }, 
+  { key: 'assigned', label: 'Tickets của tôi' },
+  { key: 'resolved', label: 'Tickets đã giải quyết' },
 ]
 
-const activeTab = ref('new')
+const activeTab = ref('wait') // Mặc định mở tab "Chờ"
 
 const currentComponent = computed(() => {
-  if (activeTab.value === 'new') return NewTickets
+  if (activeTab.value === 'wait') return NewTickets
   if (activeTab.value === 'assigned') return MyAssignedTickets
   if (activeTab.value === 'resolved') return ResolvedTickets
   return null

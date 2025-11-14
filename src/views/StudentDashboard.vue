@@ -216,11 +216,11 @@
 </template>
 
 <script setup lang="ts">
-// (GHI CHÚ: Toàn bộ <script> đã đúng từ câu trước, giữ nguyên)
 import { ref, onMounted, computed } from 'vue'
 import { api } from '@/api/axios' 
 import { useRouter } from 'vue-router'
 
+// (GHI CHÚ: GIỮ NGUYÊN) Tất cả các biến ref
 const router = useRouter()
 const showModal = ref(false)
 const form = ref({ title: '', category: 0, description: '' })
@@ -245,12 +245,16 @@ const totalPages = ref(1)
 let ticketSearchTimeout: any = null; 
 const myRequestsList = ref<HTMLElement | null>(null)
 
+// === (GHI CHÚ: ĐÂY LÀ HÀM SỬA LỖI CỦA ANH) ===
+// Hàm này gọi API "/my-requests/{studentId}" (API của Sinh viên)
+// thay vì API "/queue/new" (API của KTV)
 async function fetchMyTickets() {
   const studentId = localStorage.getItem('currentUserId');
   if (!studentId) return;
   
   ticketsLoading.value = true;
   try {
+    // (GHI CHÚ: Đảm bảo gọi đúng API GetMyRequests)
     const response = await api.get(`/tickets/my-requests/${studentId}`, {
       params: {
         searchTitle: ticketSearchQuery.value,
@@ -259,6 +263,7 @@ async function fetchMyTickets() {
         page: currentPage.value
       }
     });
+    // (GHI CHÚ: Đảm bảo gán đúng "response.data.tickets")
     myTickets.value = response.data.tickets;
     totalPages.value = response.data.totalPages;
     currentPage.value = response.data.currentPage;
@@ -269,6 +274,7 @@ async function fetchMyTickets() {
   }
 }
 
+// (GHI CHÚ: GIỮ NGUYÊN) Các hàm fetchPopularKB, fetchSearchKB
 async function fetchPopularKB() { 
   kbLoading.value = true;
   kbTitle.value = 'Bài viết phổ biến';
@@ -292,11 +298,13 @@ async function fetchSearchKB() {
   } finally { kbLoading.value = false; }
 }
 
+// (GHI CHÚ: GIỮ NGUYÊN) Hàm handleKBSearch
 function handleKBSearch() {
   clearTimeout(kbSearchTimeout); 
   kbSearchTimeout = setTimeout(() => { fetchSearchKB(); }, 500); 
 }
 
+// (GHI CHÚ: GIỮ NGUYÊN) Hàm resetAndFetchTickets (đã tối ưu)
 function resetAndFetchTickets() {
   clearTimeout(ticketSearchTimeout); 
   ticketSearchTimeout = setTimeout(async () => {
@@ -306,7 +314,7 @@ function resetAndFetchTickets() {
   }, 500); 
 }
 
-// (GHI CHÚ: Đã sửa lỗi type 'string' | 'number')
+// (GHI CHÚ: GIỮ NGUYÊN) Hàm changePage (đã sửa lỗi type)
 async function changePage(page: number | string) { 
   if (typeof page === 'string') {
     return; 
@@ -317,7 +325,7 @@ async function changePage(page: number | string) {
   await fetchMyTickets();
 }
 
-// (GHI CHÚ: Đã sửa lỗi type 'string' | 'number')
+// (GHI CHÚ: GIỮ NGUYÊN) Hàm visiblePageNumbers (đã sửa lỗi type)
 const visiblePageNumbers = computed(() => {
   const total = totalPages.value;
   const current = currentPage.value;
@@ -344,6 +352,7 @@ const visiblePageNumbers = computed(() => {
   return pages;
 });
 
+// (GHI CHÚ: GIỮ NGUYÊN) Hàm fetchStatuses (đã gọi API)
 async function fetchStatuses() {
   try {
     const response = await api.get('/statuses'); 
@@ -352,6 +361,8 @@ async function fetchStatuses() {
     console.error('Không tải được danh sách trạng thái:', error);
   }
 }
+
+// (GHI CHÚ: GIỮ NGUYÊN) onMounted (đã gọi fetchStatuses)
 onMounted(async () => {
   const studentId = localStorage.getItem('currentUserId');
   if (!studentId) {
@@ -366,6 +377,8 @@ onMounted(async () => {
     fetchPopularKB() 
   ]);
 });
+
+// (GHI CHÚ: GIỮ NGUYÊN) Hàm fetchCategories
 async function fetchCategories() {
   try {
     const response = await api.get('/categories')
@@ -374,6 +387,8 @@ async function fetchCategories() {
     console.error('Không tải được danh mục:', error)
   }
 }
+
+// (GHI CHÚ: GIỮ NGUYÊN) Hàm submitRequest
 async function submitRequest() {
   const studentId = localStorage.getItem('currentUserId');
   if (!studentId || form.value.category === 0) { 
@@ -393,7 +408,7 @@ async function submitRequest() {
     const newTicketId = response.data.ticketId
     closeFormModal()
     currentPage.value = 1; 
-    await fetchMyTickets(); 
+    await fetchMyTickets(); // Tải lại danh sách ticket
     notificationTitle.value = 'Thành công!'
     notificationMessage.value = 'Gửi yêu cầu thành công...'
     ticketIdToRedirect.value = newTicketId
@@ -406,10 +421,14 @@ async function submitRequest() {
     showNotificationModal.value = true
   }
 }
+
+// (GHI CHÚ: GIỮ NGUYÊN) Hàm closeFormModal
 function closeFormModal() {
   showModal.value = false
   form.value = { title: '', category: 0, description: '' }
 }
+
+// (GHI CHÚ: GIỮ NGUYÊN) Hàm handleNotificationClose
 function handleNotificationClose() {
   showNotificationModal.value = false
   if (ticketIdToRedirect.value) {
@@ -417,6 +436,8 @@ function handleNotificationClose() {
     ticketIdToRedirect.value = null
   }
 }
+
+// (GHI CHÚ: GIỮ NGUYÊN) Hàm goToTicket
 function goToTicket(ticketId: number) {
   router.push(`/request-detail/${ticketId}`);
 }

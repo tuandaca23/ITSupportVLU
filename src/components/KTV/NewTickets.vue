@@ -1,7 +1,10 @@
 <template>
   <div class="text-black">
-    <h2 class="text-xl font-semibold mb-4">New Tickets Queue</h2>
-    <table class="w-full table-auto border-collapse border border-gray-300">
+    <h2 class="text-xl font-semibold mb-4">Tickets đang chờ KTV (Queue)</h2>
+    <div v-if="loading" class="text-gray-500">Đang tải...</div>
+    <div v-if="!loading && tickets.length === 0" class="text-gray-500">Không có ticket nào đang chờ.</div>
+    
+    <table v-if="!loading && tickets.length > 0" class="w-full table-auto border-collapse border border-gray-300">
       <thead>
         <tr class="bg-gray-100">
           <th class="border border-gray-300 px-4 py-2">Mã Ticket</th>
@@ -19,7 +22,7 @@
           <td class="border border-gray-300 px-4 py-2">{{ ticket.subject }}</td>
           <td class="border border-gray-300 px-4 py-2">{{ ticket.requester }}</td>
           <td class="border border-gray-300 px-4 py-2">{{ ticket.category }}</td>
-          <td class="border border-gray-300 px-4 py-2">{{ ticket.status }}</td>
+          <td class="border border-gray-300 px-4 py-2 font-semibold text-red-600">{{ ticket.status }}</td>
           <td class="border border-gray-300 px-4 py-2">{{ ticket.updatedAt }}</td>
           <td class="border border-gray-300 px-4 py-2">
             <button
@@ -38,41 +41,42 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { api } from '@/api/axios' // 1. Import helper API
+import { api } from '@/api/axios'
 
 const router = useRouter()
-const tickets = ref<any[]>([]) // 2. Bắt đầu với mảng rỗng
+const tickets = ref<any[]>([])
+const loading = ref(true)
 
-// 3. Hàm tải ticket mới
 async function fetchNewTickets() {
+  loading.value = true;
   try {
-    const response = await api.get('/tickets/queue/new') // Gọi API 3
-    tickets.value = response.data
+    // Gọi API lấy ticket "Wait"
+    const response = await api.get('/tickets/queue/new'); 
+    tickets.value = response.data;
   } catch (error) {
-    console.error('Không tải được ticket mới:', error)
+    console.error("Lỗi tải ticket chờ:", error);
+  } finally {
+    loading.value = false;
   }
 }
-
-// 4. Tải ticket khi component được mounted
-onMounted(fetchNewTickets)
+onMounted(fetchNewTickets);
 
 async function claimTicket(id: string) {
-  // 5. Lấy KtvId đã "đăng nhập"
-  const ktvId = localStorage.getItem('currentUserId')
+  const ktvId = localStorage.getItem('currentUserId');
   if (!ktvId) {
-    alert('Lỗi: Không tìm thấy ID KTV. Vui lòng đăng nhập lại.')
-    return
+    alert("Không tìm thấy KTV ID");
+    return;
   }
-
+  
   try {
-    // 6. Gọi API 4 (Claim Ticket)
-    const payload = { ktvId: parseInt(ktvId) }
-    await api.post(`/tickets/${id}/claim`, payload)
-
-    // 7. Chuyển trang (nếu thành công)
-    router.push(`/ktv-request-detail/${id}`)
-  } catch (error) {
-    console.error('Lỗi khi nhận ticket:', error)
+    // Gọi API Claim
+    await api.post(`/tickets/${id}/claim`, { ktvId: parseInt(ktvId) });
+    router.push(`/ktv-request-detail/${id}`);
+  } catch (error: any) {
+    console.error("Lỗi khi nhận ticket:", error);
+    alert("Nhận ticket thất bại: " + (error.response?.data?.message || error.message));
+    // Tải lại danh sách, có thể KTV khác đã nhận
+    await fetchNewTickets();
   }
 }
 </script>

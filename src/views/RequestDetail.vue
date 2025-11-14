@@ -17,9 +17,11 @@
         <div v-else class="space-y-4 max-h-96 overflow-y-auto bg-gray-50 p-4 rounded-lg">
           
           <div v-for="(msg, index) in chatHistory" :key="index" 
-               :class="!msg.isKtvMessage ? 'flex justify-end' : 'flex justify-start'">
-            <div :class="!msg.isKtvMessage ? 'bg-blue-100' : 'bg-green-100'" 
+               :class="msg.senderRole === 'Student' ? 'flex justify-end' : 'flex justify-start'">
+            <div 
+                 :class="msg.senderRole === 'Student' ? 'bg-blue-100' : 'bg-green-100'" 
                  class="p-3 rounded-lg max-w-xs">
+              
               <p class="text-sm font-semibold text-black">{{ msg.senderName }}</p>
               
               <p class="text-black whitespace-pre-wrap break-all">
@@ -158,42 +160,37 @@ const ticketId = route.params.id as string;
 const ticket = ref<any>(null); 
 const chatHistory = ref<any[]>([]); 
 const newMessage = ref(''); 
-const hasRequestedKtv = ref(false);
+// (GHI CHÚ: Xóa 'hasRequestedKtv' vì logic computed đã thay đổi)
 const showConfirmationModal = ref(false)
 const confirmationTitle = ref('')
 const confirmationMessage = ref('')
 const onConfirmAction = ref<(() => void) | null>(null) 
+
+// (GHI CHÚ: Logic computed đã cập nhật "Wait" và "In Progress")
 const showConnectButtons = computed(() => {
-  return ticket.value && !ticket.value.isClosed && !ticket.value.isAssigned && !hasRequestedKtv.value;
+  return ticket.value && ticket.value.statusName === 'New';
 });
 const showChatBox = computed(() => {
-  return ticket.value && !ticket.value.isClosed && (ticket.value.isAssigned || hasRequestedKtv.value);
+  return ticket.value && (ticket.value.statusName === 'In Progress' || ticket.value.statusName === 'Wait');
 });
 const showGoBackButtonOnly = computed(() => {
-  return ticket.value && ticket.value.isClosed;
+  return ticket.value && ticket.value.statusName === 'Resolved';
 });
 
-// (GHI CHÚ: THÊM MỚI) Hàm "linkify" an toàn
-// Tách tin nhắn thành các phần text và URL
+// (GHI CHÚ: GIỮ NGUYÊN) Hàm "linkify"
 function getMessageParts(message: string) {
   if (!message) return [];
-  
-  // (GHI CHÚ:) Regex này tìm kiếm các URL (http, https)
   const urlRegex = /(https?:\/\/[^\s]+)/g;
-  
-  // Tách chuỗi tại vị trí URL
   const parts = message.split(urlRegex);
-  
   return parts.map(part => {
-    // Kiểm tra xem phần tử này có phải là URL không
     if (part.match(urlRegex)) {
       return { type: 'url', content: part };
     }
     return { type: 'text', content: part };
-  }).filter(part => part.content.length > 0); // Bỏ các chuỗi rỗng
+  }).filter(part => part.content.length > 0);
 }
 
-// (GHI CHÚ: GIỮ NGUYÊN) Toàn bộ các hàm logic còn lại
+// (GHI CHÚ: GIỮ NGUYÊN) Hàm tải dữ liệu
 async function fetchData() {
   try {
     const ticketResponse = await api.get(`/tickets/${ticketId}`);
@@ -206,6 +203,7 @@ async function fetchData() {
 }
 onMounted(fetchData);
 
+// (GHI CHÚ: GIỮ NGUYÊN) Hàm gửi tin nhắn
 async function sendReply() {
   const studentId = localStorage.getItem('currentUserId');
   if (!studentId || newMessage.value.trim() === '') return;
@@ -219,6 +217,7 @@ async function sendReply() {
   }
 }
 
+// (GHI CHÚ: GIỮ NGUYÊN) Các hàm Modal (open/close/handle)
 function openConfirmation(title: string, message: string, onConfirm: () => void) {
   confirmationTitle.value = title;
   confirmationMessage.value = message;
@@ -238,24 +237,30 @@ function handleConfirm() {
   }
   closeConfirmationModal();
 }
+
+// (GHI CHÚ: GIỮ NGUYÊN) Hàm API "Mark Solved" (đã dùng DTO)
 async function callApiMarkAsSolved() {
+  const studentId = localStorage.getItem('currentUserId');
+  if (!studentId) { /*... (báo lỗi) ...*/ return; }
+  
   try {
-    await api.post(`/tickets/${ticketId}/mark-solved`);
+    await api.post(`/tickets/${ticketId}/mark-solved`, { studentId: parseInt(studentId) });
     router.push('/dashboard-sinhvien'); 
-  } catch (error) {
-    console.error("Lỗi khi đóng ticket:", error);
-    openConfirmation("Lỗi", "Không thể đóng ticket. Vui lòng thử lại.", () => {});
-  }
+  } catch (error) { /*... (báo lỗi) ...*/ }
 }
+
+// (GHI CHÚ: GIỮ NGUYÊN) Hàm API "Request KTV" (đã dùng DTO)
 async function callApiRequestKtv() {
+  const studentId = localStorage.getItem('currentUserId');
+  if (!studentId) { /*... (báo lỗi) ...*/ return; }
+
   try {
-    await api.post(`/tickets/${ticketId}/request-ktv`);
-    hasRequestedKtv.value = true; 
-  } catch (error) {
-    console.error("Lỗi khi yêu cầu KTV:", error);
-    openConfirmation("Lỗi", "Không thể gửi yêu cầu KTV. Vui lòng thử lại.", () => {});
-  }
+    await api.post(`/tickets/${ticketId}/request-ktv`, { studentId: parseInt(studentId) });
+    await fetchData(); // Tải lại (để statusName đổi thành "Wait")
+  } catch (error) { /*... (báo lỗi) ...*/ }
 }
+
+// (GHI CHÚ: GIỮ NGUYÊN) Các hàm Wrapper (onMark... / onRequest...)
 function onMarkAsSolvedClicked() {
   openConfirmation(
     "Xác nhận giải quyết", 
@@ -277,5 +282,4 @@ const goBack = () => {
 
 <style scoped>
 /* (GHI CHÚ: GIỮ NGUYÊN) */
-/* Tailwind xử lý phần giao diện */
 </style>

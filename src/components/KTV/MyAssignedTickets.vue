@@ -1,7 +1,10 @@
 <template>
   <div class="text-black">
-    <h2 class="text-xl font-semibold mb-4">My Assigned Tickets</h2>
-    <table class="w-full table-auto border-collapse border border-gray-300">
+    <h2 class="text-xl font-semibold mb-4">Tickets của tôi (Đang xử lý)</h2>
+    <div v-if="loading" class="text-gray-500">Đang tải...</div>
+    <div v-if="!loading && tickets.length === 0" class="text-gray-500">Bạn không có ticket nào đang xử lý.</div>
+    
+    <table v-if="!loading && tickets.length > 0" class="w-full table-auto border-collapse border border-gray-300">
       <thead>
         <tr class="bg-gray-100">
           <th class="border border-gray-300 px-4 py-2">Mã Ticket</th>
@@ -18,7 +21,7 @@
           <td class="border border-gray-300 px-4 py-2">{{ ticket.subject }}</td>
           <td class="border border-gray-300 px-4 py-2">{{ ticket.requester }}</td>
           <td class="border border-gray-300 px-4 py-2">{{ ticket.category }}</td>
-          <td class="border border-gray-300 px-4 py-2">{{ ticket.status }}</td>
+          <td class="border border-gray-300 px-4 py-2 font-semibold text-blue-600">{{ ticket.status }}</td>
           <td class="border border-gray-300 px-4 py-2">
             <router-link
               :to="`/ktv-request-detail/${ticket.id}`"
@@ -34,8 +37,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-const tickets = ref([
-  { id: 'T002', subject: 'Lỗi phần mềm', requester: 'Sinh viên B', category: 'Lỗi Phần mềm', status: 'Assigned' },
-])
+import { ref, onMounted } from 'vue'
+import { api } from '@/api/axios'
+
+const tickets = ref<any[]>([])
+const loading = ref(true)
+const ktvId = localStorage.getItem('currentUserId');
+
+onMounted(async () => {
+  if (!ktvId) {
+    loading.value = false;
+    return;
+  }
+  loading.value = true;
+  try {
+    // Gọi API lấy ticket "In Progress" của KTV này
+    const response = await api.get(`/tickets/queue/assigned/${ktvId}`); 
+    tickets.value = response.data;
+  } catch (error) {
+    console.error("Lỗi tải ticket của tôi:", error);
+  } finally {
+    loading.value = false;
+  }
+});
 </script>

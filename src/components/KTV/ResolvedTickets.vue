@@ -1,7 +1,10 @@
 <template>
   <div class="text-black">
-    <h2 class="text-xl font-semibold mb-4">Resolved Tickets</h2>
-    <table class="w-full table-auto border-collapse border border-gray-300">
+    <h2 class="text-xl font-semibold mb-4">Resolved Tickets (20 gần nhất)</h2>
+    <div v-if="loading" class="text-gray-500">Đang tải...</div>
+    <div v-if="!loading && tickets.length === 0" class="text-gray-500">Chưa có ticket nào được giải quyết.</div>
+    
+    <table v-if="!loading && tickets.length > 0" class="w-full table-auto border-collapse border border-gray-300">
       <thead>
         <tr class="bg-gray-100">
           <th class="border border-gray-300 px-4 py-2">Mã Ticket</th>
@@ -27,8 +30,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-const tickets = ref([
-  { id: 'T003', subject: 'Tài khoản', requester: 'Sinh viên C', category: 'Tài khoản', status: 'Resolved' },
-])
+import { ref, onMounted } from 'vue'
+import { api } from '@/api/axios'
+
+const tickets = ref<any[]>([])
+const loading = ref(true)
+
+onMounted(async () => {
+  loading.value = true;
+  try {
+    // Gọi API lấy ticket "Resolved"
+    const response = await api.get('/tickets/queue/resolved'); 
+    tickets.value = response.data;
+  } catch (error) {
+    console.error("Lỗi tải ticket đã giải quyết:", error);
+  } finally {
+    loading.value = false;
+  }
+});
 </script>
